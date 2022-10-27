@@ -16,20 +16,20 @@ async function resize(req, res, next) {
     const buff = await sharp(`./${image.path}`)
       .resize({
         width: Math.ceil(image.newW),
-        height: Math.ceil(image.newH),
+        height: Math.ceil(image.newH)
       })
       .extract({
         left: exctractLeft,
         top: exctractTop,
         width: Math.round(image.borderWidth),
-        height: Math.round(image.borderWidth),
+        height: Math.round(image.borderWidth)
       })
       .toBuffer()
 
     await sharp(buff)
       .resize({
         width: 200,
-        height: 200,
+        height: 200
       })
       .toFile(newName)
 

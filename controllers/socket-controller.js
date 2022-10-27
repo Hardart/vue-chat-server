@@ -6,6 +6,7 @@ module.exports = io => {
     socket.join(roomService.title)
 
     io.emit('users-online', await roomService.getOnlineUsers())
+    socket.emit('messageHistory', await roomService.loadHistory())
 
     socket.on('enter', async () => {
       io.emit('users-online', await roomService.getOnlineUsers())
@@ -35,10 +36,14 @@ module.exports = io => {
       })
     })
 
-    socket.emit('messageHistory', await roomService.loadHistory())
-
     socket.on('getAllMessages', async () => {
       socket.emit('messageHistory', await roomService.loadHistory())
+    })
+
+    socket.on('update', async () => {
+      const messages = await roomService.loadHistory()
+      const users = await roomService.getOnlineUsers()
+      socket.emit('updated', { messages, users })
     })
   })
 }
