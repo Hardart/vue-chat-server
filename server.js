@@ -17,7 +17,6 @@ const io = require('socket.io')(server, {
   }
 })
 
-console.log(io)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
