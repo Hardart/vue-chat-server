@@ -33,7 +33,7 @@ app.use(errorMiddleware)
 
 async function startServer() {
   try {
-    await mongoose.connect(
+    mongoose.connect(
       process.env.DB_CONN,
       {
         useNewUrlParser: true,
