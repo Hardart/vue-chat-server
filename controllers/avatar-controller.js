@@ -9,7 +9,7 @@ class AvatarController {
   }
 
   async resize(req, res) {
-    if (req.resize) {
+    if (req.resizing) {
       const { accessToken, refreshToken } = await avatarService.changeAvatar(req.user)
       res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
       return res.status(200).json({ accessToken })

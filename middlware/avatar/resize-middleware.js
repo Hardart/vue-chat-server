@@ -5,24 +5,26 @@ const MessageModel = require('../../models/message-model')
 
 async function resize(req, res, next) {
   if (req.body.avatar) {
-    const image = req.body.avatar
+    const fullImage = req.body.avatar
 
-    const path = image.path.match(/(.*)\./)[1] // путь файла без расширения
-    const ext = image.path.match(/\.(.*)/)[0] // расширение -> .jpg
-    const newName = `${path}_avatar${ext}`
-    const exctractTop = Math.round((image.newH - image.borderWidth) / 2 - image.posY)
-    const exctractLeft = Math.round((image.newW - image.borderWidth) / 2 - image.posX)
+    // const path = image.path.match(/(.*)\./)[1] // путь файла без расширения
+    // console.log(`PATH: ${image.path}`)
+    // const ext = image.path.match(/\.(.*)/)[0] // расширение -> .jpg
+    // const newName = `${path}_avatar${ext}`
+    const publicPath = fullImage.path.split('.').join('_avatar.')
+    const exctractTop = Math.round((fullImage.newH - fullImage.borderWidth) / 2 - fullImage.posY)
+    const exctractLeft = Math.round((fullImage.newW - fullImage.borderWidth) / 2 - fullImage.posX)
 
-    const buff = await sharp(`./${image.path}`)
+    const buff = await sharp(`./${fullImage.path}`)
       .resize({
-        width: Math.ceil(image.newW),
-        height: Math.ceil(image.newH)
+        width: Math.ceil(fullImage.newW),
+        height: Math.ceil(fullImage.newH)
       })
       .extract({
         left: exctractLeft,
         top: exctractTop,
-        width: Math.round(image.borderWidth),
-        height: Math.round(image.borderWidth)
+        width: Math.round(fullImage.borderWidth),
+        height: Math.round(fullImage.borderWidth)
       })
       .toBuffer()
 
@@ -31,15 +33,16 @@ async function resize(req, res, next) {
         width: 200,
         height: 200
       })
-      .toFile(newName)
+      .toFile(publicPath)
 
-    req.resize = { path: newName.match(/public\/(.*)/)[1] }
+    const relativePath = publicPath.match(/[^public].+/g)[0]
 
     const user = await UserModel.findOne({ _id: req.user.id })
-    user.avatar = req.resize.path
+    user.avatar = relativePath
     await user.save()
-    await MessageModel.updateMany({ userID: user.chatID }, { userAvatar: process.env.SERVER_URL + '/' + req.resize.path })
+    await MessageModel.updateMany({ userID: user.chatID }, { userAvatar: relativePath })
     req.user = user
+    req.resizing = true
   }
 
   next()

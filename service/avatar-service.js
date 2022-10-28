@@ -2,7 +2,7 @@ const tokenService = require('../service/token-service')
 const imageInfo = require('image-size')
 
 class AvatarService {
-  async upload(user, file) {
+  async upload(_, file) {
     const result = imageInfo('./' + file.path)
     file.width = result.width
     file.height = result.height
