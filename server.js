@@ -14,7 +14,7 @@ const socketController = require('./controllers/socket-controller')
 const io = require('socket.io')(server, {
   cors: {
     credentials: true,
-    origin: 'http://127.0.0.1:8080'
+    origin: process.env.CLIENT_SERVER
   }
 })
 
@@ -25,7 +25,7 @@ app.use(express.static(__dirname + '/public'))
 app.use(
   cors({
     credentials: true,
-    origin: 'http://127.0.0.1:8080'
+    origin: process.env.CLIENT_SERVER
   })
 )
 app.use('/', router)
