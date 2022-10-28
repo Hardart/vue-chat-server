@@ -11,7 +11,7 @@ class UserController {
       if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при валидации', validErrors.array()))
       const { email, password, name = 'Гость', roles = ['user'] } = req.body
       const { accessToken, refreshToken, user } = await userService.registration(email, password, name, roles, avatar)
-      res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'None' })
+      res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
       return res.status(200).json({ accessToken, user })
     } catch (error) {
       next(error)
@@ -24,7 +24,7 @@ class UserController {
       if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при валидации', validErrors.array()))
       const { email, password } = req.body
       const { accessToken, refreshToken } = await userService.login(email, password)
-      res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'None', secure: true })
+      res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
       return res.status(200).json({ accessToken })
     } catch (error) {
       next(error)
