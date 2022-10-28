@@ -12,9 +12,9 @@ const uploads = require('./router/uploads')
 const errorMiddleware = require('./middlware/error-middleware')
 const socketController = require('./controllers/socket-controller')
 const io = require('socket.io')(server, {
-  allowRequest: (req, callback) => {
-    const noOriginHeader = req.headers.origin === undefined
-    callback(null, noOriginHeader)
+  cors: {
+    credentials: true,
+    origin: 'http://127.0.0.1:8080'
   }
 })
 
