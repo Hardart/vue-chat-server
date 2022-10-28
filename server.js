@@ -20,8 +20,8 @@ const io = require('socket.io')(server, {
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(cookieParser())
 app.use(express.static(__dirname + '/public'))
+app.use(cookieParser())
 app.use(
   cors({
     credentials: true,

@@ -28,7 +28,6 @@ class UserService {
     const { _id, name, roles, chatID, avatar } = user
     roomService.addUser(_id.toString())
     const tokens = tokenService.generateTokens({ id: _id, email, name, roles, chatID, avatar })
-    console.log(tokens)
     await tokenService.saveRefreshToken(_id, tokens.refreshToken)
 
     return { ...tokens }
