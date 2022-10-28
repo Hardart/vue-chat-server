@@ -25,7 +25,7 @@ app.use(express.static(__dirname + '/public'))
 app.use(
   cors({
     credentials: true,
-    origin: 'https://vue-chat-client.vercel.app'
+    origin: 'http://127.0.0.1:8080'
   })
 )
 app.use('/', router)
