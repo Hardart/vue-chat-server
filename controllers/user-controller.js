@@ -8,7 +8,7 @@ class UserController {
     try {
       const validErrors = validationResult(req)
       const avatar = process.env.AVATAR
-      if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при валидации', validErrors.array()))
+      if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при регистрации', validErrors.array()))
       const { email, password, name = 'Гость', roles = ['user'] } = req.body
       const { accessToken, refreshToken, user } = await userService.registration(email, password, name, roles, avatar)
       res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
@@ -21,7 +21,7 @@ class UserController {
   async login(req, res, next) {
     try {
       const validErrors = validationResult(req)
-      if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при валидации', validErrors.array()))
+      if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при авторизации', validErrors.array()))
       const { email, password } = req.body
       const { accessToken, refreshToken } = await userService.login(email, password)
       res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
