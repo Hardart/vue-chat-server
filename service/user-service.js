@@ -2,7 +2,7 @@ const bcrypt = require('bcryptjs')
 const UserModel = require('../models/user-model')
 const MessageModel = require('../models/message-model')
 const tokenService = require('../service/token-service')
-const roomService = require('./room-service')
+const ns = require('./namespace-service')
 const ErrorApi = require('../handlers/error-api')
 
 class UserService {
@@ -26,7 +26,7 @@ class UserService {
     if (!isPasswordCorrect) throw ErrorApi.BadRequest(`Неверный пароль`)
 
     const { _id, name, roles, chatID, avatar } = user
-    roomService.addUser(_id.toString())
+    // roomService.addUser(_id.toString())
     const tokens = tokenService.generateTokens({ id: _id, email, name, roles, chatID, avatar })
     await tokenService.saveRefreshToken(_id, tokens.refreshToken)
 
@@ -35,7 +35,7 @@ class UserService {
 
   async logout(refreshToken) {
     const { id } = tokenService.validateRefreshToken(refreshToken)
-    roomService.deleteUser(id)
+    // roomService.deleteUser(id)
     const token = tokenService.clearToken(refreshToken)
     return token
   }

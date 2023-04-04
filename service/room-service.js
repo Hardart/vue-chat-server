@@ -1,25 +1,20 @@
 const MessageModel = require('../models/message-model')
 const UserModel = require('../models/user-model')
 
-class RoomService {
+class Room {
   constructor(roomId, title, privateRoom = false) {
     this.roomId = roomId
     this.title = title
     this.privateRoom = privateRoom
     this.users = new Set()
+    this.history = []
     this.onlineUsers = []
   }
 
-  async addMessage({ userID, userName, text, sendTime, userAvatar }) {
-    const message = new MessageModel({
-      userID,
-      userName,
-      sendTime,
-      userAvatar,
-      text
-    })
-
+  async addMessage(msgData) {
+    const message = new MessageModel(msgData)
     await message.save()
+    this.history.push(message)
     return message
   }
 
@@ -29,15 +24,16 @@ class RoomService {
 
   deleteUser(userID) {
     this.users.delete(userID)
+    this.onlineUsers = this.onlineUsers.filter(user => user.id !== userID)
   }
 
   async loadHistory() {
-    return await MessageModel.find()
+    this.history = await MessageModel.find({ room: this.title })
   }
 
   async getOnlineUsers() {
     let onlineUsers = await UserModel.find({ _id: { $in: [...this.users] } })
-    onlineUsers = onlineUsers.map(user => ({
+    this.onlineUsers = onlineUsers.map(user => ({
       id: user._id.toString(),
       chatID: user.chatID,
       email: user.email,
@@ -45,8 +41,6 @@ class RoomService {
       avatar: user.avatar,
       roles: user.roles
     }))
-
-    return onlineUsers
   }
 
   updateUser() {
@@ -54,4 +48,4 @@ class RoomService {
   }
 }
 
-module.exports = new RoomService(0, 'main')
+module.exports = Room

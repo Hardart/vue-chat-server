@@ -1,5 +1,5 @@
 const ErrorApi = require('../handlers/error-api')
-const roomService = require('../service/room-service')
+// const roomService = require('../service/room-service')
 const tokenService = require('../service/token-service')
 
 module.exports = function (req, res, next) {
@@ -12,7 +12,7 @@ module.exports = function (req, res, next) {
   const userData = tokenService.validateAccessToken(accessToken)
   if (!userData) return next(ErrorApi.UnathorizedError())
 
-  roomService.addUser(userData.id)
+  // roomService.addUser(userData.id)
   req.user = { id: userData.id, email: userData.email, name: userData.name, roles: userData.roles }
   next()
 }

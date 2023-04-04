@@ -23,8 +23,10 @@ class UserController {
       const validErrors = validationResult(req)
       if (!validErrors.isEmpty()) return next(ErrorApi.BadRequest('Ошибка при авторизации', validErrors.array()))
       const { email, password } = req.body
+
       const { accessToken, refreshToken } = await userService.login(email, password)
-      res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
+
+      res.cookie('refreshToken', refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true, sameSite: 'None', secure: true })
       return res.status(200).json({ accessToken })
     } catch (error) {
       next(error)
@@ -46,6 +48,7 @@ class UserController {
       const { refreshToken } = req.cookies
       const tokenData = await userService.refresh(refreshToken)
       res.cookie('refreshToken', tokenData.refreshToken, { maxAge: 30 * 24 * 60 * 60 * 1000, httpOnly: true })
+
       return res.status(200).json({ accessToken: tokenData.accessToken, refreshToken: tokenData.refreshToken })
     } catch (error) {
       return res.status(200).json({ message: 'пользователь не авторизован' })

@@ -11,6 +11,9 @@ const router = require('./router/index')
 const uploads = require('./router/uploads')
 const errorMiddleware = require('./middlware/error-middleware')
 const socketController = require('./controllers/socket-controller')
+const { Socket } = require('socket.io')
+
+/** @type {Socket} */
 const io = require('socket.io')(server, {
   cors: {
     credentials: true,
