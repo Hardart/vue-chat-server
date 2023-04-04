@@ -9,19 +9,39 @@ module.exports = io => {
     socket.emit('nsList', ns)
   })
   io.of(ns.endpoint).on('connection', nsSocket => {
-    // nsSocket.on('disconnecting', () => {})
-
     nsSocket.on('room:join', async (roomToJoin, roomToLeave, userID) => {
       leaveOldRoom(nsSocket, roomToJoin, roomToLeave, userID)
       joinToNewRoom(nsSocket, roomToJoin, userID)
     })
 
     nsSocket.on('room:newMessage', async msgData => {
-      const currentRoom = ns.rooms.find(room => room.title == msgData.room)
+      /** @type {Room} */
+      const currentRoom = ns.findRoom(msgData.room)
       const message = await currentRoom.addMessage(msgData)
       nsSocket.broadcast.emit('room:sendMessage', message)
     })
+
+    nsSocket.on('disconnecting', onDisconnecting(nsSocket))
   })
+
+  function onDisconnecting(socket) {
+    return () => {
+      const userID = socket.handshake.auth.id
+      for (const roomTitle of socket.rooms) {
+        if (roomTitle !== socket.id) {
+          /** @type {Room} */
+          const currentRoom = ns.findRoom(roomTitle)
+          currentRoom.deleteUser(userID)
+
+          setTimeout(() => {
+            if (currentRoom.isUserInRoom(userID)) return
+            socket.leave(roomTitle)
+            updateUsersInRoom(roomTitle, currentRoom.onlineUsers)
+          }, 3000)
+        }
+      }
+    }
+  }
   // io.of(ns.title).on('connection', async(newRoom, oldRoom) => {
   //
   //
@@ -58,13 +78,13 @@ module.exports = io => {
   // })
 
   function updateUsersInRoom(roomTitle, users) {
-    // Send back the number of users in this room to ALL sockets connected to this room
+    // Send back the array of users in this room to ALL sockets connected to this room
     io.of(ns.endpoint).to(roomTitle).emit('updateUsersInRoom', users)
   }
 
   async function joinToNewRoom(nsSocket, roomToJoin, userID) {
     /** @type {Room} */
-    const currentRoom = ns.rooms.find(room => room.title == roomToJoin)
+    const currentRoom = ns.findRoom(roomToJoin)
     nsSocket.join(roomToJoin)
     currentRoom.addUser(userID)
     await currentRoom.getOnlineUsers()
@@ -78,7 +98,7 @@ module.exports = io => {
     if (roomToLeave == null || roomToJoin == roomToLeave) return
     nsSocket.leave(roomToLeave)
     /** @type {Room} */
-    const oldRoom = ns.rooms.find(room => room.title == roomToLeave)
+    const oldRoom = ns.findRoom(roomToLeave)
     oldRoom.deleteUser(userID)
     updateUsersInRoom(roomToLeave, oldRoom.onlineUsers)
   }

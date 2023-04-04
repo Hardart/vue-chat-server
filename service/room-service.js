@@ -43,6 +43,10 @@ class Room {
     }))
   }
 
+  isUserInRoom(id) {
+    return this.users.has(id)
+  }
+
   updateUser() {
     return this.users
   }

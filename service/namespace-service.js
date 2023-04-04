@@ -17,6 +17,10 @@ class Namespace {
   selectedNS(bool = true) {
     this.active = bool ? 'active' : ''
   }
+
+  findRoom(roomTitle) {
+    return this.rooms.find(r => r.title == roomTitle)
+  }
 }
 const mainNS = new Namespace(0, 'Main', 'main.png', '/main')
 mainNS.addRoom(new Room(0, 'Гостинная', false))

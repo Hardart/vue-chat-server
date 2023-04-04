@@ -1,7 +1,7 @@
 const { Schema, model } = require('mongoose')
 
 const MessageSchema = Schema({
-  userID: Number,
+  userID: { type: Schema.Types.ObjectId, ref: 'User' },
   userName: String,
   userAvatar: String,
   sendTime: Date,
