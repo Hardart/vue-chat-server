@@ -2,11 +2,9 @@ const { Schema, model } = require('mongoose')
 
 const MessageSchema = Schema({
   userID: { type: Schema.Types.ObjectId, ref: 'User' },
-  userName: String,
-  userAvatar: String,
+  roomID: { type: Schema.Types.ObjectId, ref: 'Room' },
   sendTime: Date,
-  text: String,
-  room: String
+  text: String
 })
 
 module.exports = model('Message', MessageSchema)

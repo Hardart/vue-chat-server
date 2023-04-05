@@ -1,8 +1,10 @@
 require('dotenv').config()
-
+const fs = require('fs')
+const key = fs.readFileSync('/Users/hardart/key.pem')
+const cert = fs.readFileSync('/Users/hardart/cert.pem')
 const express = require('express')
 const app = express()
-const server = require('http').Server(app)
+const server = require('https').createServer({ key, cert }, app)
 const PORT = process.env.PORT || 3000
 const cookieParser = require('cookie-parser')
 const cors = require('cors')

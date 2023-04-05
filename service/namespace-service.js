@@ -18,12 +18,10 @@ class Namespace {
     this.active = bool ? 'active' : ''
   }
 
-  findRoom(roomTitle) {
-    return this.rooms.find(r => r.title == roomTitle)
+  findRoom(roomID) {
+    return this.rooms.find(r => r.id == roomID)
   }
 }
 const mainNS = new Namespace(0, 'Main', 'main.png', '/main')
-mainNS.addRoom(new Room(0, 'Гостинная', false))
-mainNS.addRoom(new Room(1, 'У костра', false))
 
 module.exports = mainNS

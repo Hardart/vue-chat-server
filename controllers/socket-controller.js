@@ -2,24 +2,21 @@ const ns = require('../service//namespace-service')
 const MessageModel = require('../models/message-model')
 const { Server } = require('socket.io')
 const Room = require('../service/room-service')
+const RoomModel = require('../models/room-model')
 
 /** @param {Server} io */
-module.exports = io => {
-  io.on('connection', socket => {
+module.exports = async io => {
+  const rooms = await RoomModel.find()
+  rooms.forEach(room => ns.addRoom(new Room(room)))
+
+  io.on('connection', async socket => {
     socket.emit('nsList', ns)
   })
-  io.of(ns.endpoint).on('connection', nsSocket => {
-    nsSocket.on('room:join', async (roomToJoin, roomToLeave, userID) => {
-      leaveOldRoom(nsSocket, roomToJoin, roomToLeave, userID)
-      joinToNewRoom(nsSocket, roomToJoin, userID)
-    })
 
-    nsSocket.on('room:newMessage', async msgData => {
-      /** @type {Room} */
-      const currentRoom = ns.findRoom(msgData.room)
-      const message = await currentRoom.addMessage(msgData)
-      nsSocket.broadcast.emit('room:sendMessage', message)
-    })
+  io.of(ns.endpoint).on('connection', nsSocket => {
+    nsSocket.on('room:join', onJoinRoom(nsSocket))
+
+    nsSocket.on('room:newMessage', onNewMessage)
 
     nsSocket.on('disconnecting', onDisconnecting(nsSocket))
   })
@@ -41,6 +38,49 @@ module.exports = io => {
         }
       }
     }
+  }
+
+  function onJoinRoom(nsSocket) {
+    return async (userData, roomToLeave) => {
+      leaveOldRoom(nsSocket, userData, roomToLeave)
+      joinToNewRoom(nsSocket, userData)
+    }
+  }
+
+  async function onNewMessage(msgData) {
+    /** @type {Room} */
+    const currentRoom = ns.findRoom(msgData.roomID)
+    const message = await currentRoom.addMessage(msgData)
+    io.of(ns.endpoint).emit('room:sendMessage', message)
+  }
+
+  function updateUsersInRoom(roomTitle, users) {
+    // Send back the array of users in this room to ALL sockets connected to this room
+    io.of(ns.endpoint).to(roomTitle).emit('updateUsersInRoom', users)
+  }
+
+  async function joinToNewRoom(nsSocket, userData) {
+    const { activeRoom, id } = userData
+    /** @type {Room} */
+    const currentRoom = ns.findRoom(activeRoom)
+    nsSocket.join(activeRoom)
+    currentRoom.addUser(id)
+    await currentRoom.getOnlineUsers()
+
+    updateUsersInRoom(activeRoom, currentRoom.onlineUsers)
+
+    const msgHistory = await currentRoom.loadHistory()
+    nsSocket.emit('room:messages-history', msgHistory)
+  }
+
+  function leaveOldRoom(nsSocket, userData, roomToLeave) {
+    const { activeRoom, id } = userData
+    if (roomToLeave == null || activeRoom == roomToLeave) return
+    nsSocket.leave(roomToLeave)
+    /** @type {Room} */
+    const oldRoom = ns.findRoom(roomToLeave)
+    oldRoom.deleteUser(id)
+    updateUsersInRoom(roomToLeave, oldRoom.onlineUsers)
   }
   // io.of(ns.title).on('connection', async(newRoom, oldRoom) => {
   //
@@ -76,30 +116,4 @@ module.exports = io => {
   //     socket.emit('updated', { messages, users })
   //   })
   // })
-
-  function updateUsersInRoom(roomTitle, users) {
-    // Send back the array of users in this room to ALL sockets connected to this room
-    io.of(ns.endpoint).to(roomTitle).emit('updateUsersInRoom', users)
-  }
-
-  async function joinToNewRoom(nsSocket, roomToJoin, userID) {
-    /** @type {Room} */
-    const currentRoom = ns.findRoom(roomToJoin)
-    nsSocket.join(roomToJoin)
-    currentRoom.addUser(userID)
-    await currentRoom.getOnlineUsers()
-    updateUsersInRoom(roomToJoin, currentRoom.onlineUsers)
-
-    await currentRoom.loadHistory()
-    nsSocket.emit('room:messages-history', currentRoom.history)
-  }
-
-  function leaveOldRoom(nsSocket, roomToJoin, roomToLeave, userID) {
-    if (roomToLeave == null || roomToJoin == roomToLeave) return
-    nsSocket.leave(roomToLeave)
-    /** @type {Room} */
-    const oldRoom = ns.findRoom(roomToLeave)
-    oldRoom.deleteUser(userID)
-    updateUsersInRoom(roomToLeave, oldRoom.onlineUsers)
-  }
 }
