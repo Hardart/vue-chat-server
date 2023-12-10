@@ -1,13 +1,14 @@
 const ns = require('../service//namespace-service')
 const MessageModel = require('../models/message-model')
-const { Server } = require('socket.io')
+const { Server, Socket } = require('socket.io')
 const Room = require('../service/room-service')
 const RoomModel = require('../models/room-model')
+const jwt = require('jsonwebtoken')
 
 /** @param {Server} io */
 module.exports = async io => {
   const rooms = await RoomModel.find()
-  rooms.forEach(room => ns.addRoom(new Room(room)))
+  rooms.forEach(roomData => ns.addRoom(new Room(roomData)))
 
   io.on('connection', async socket => {
     socket.emit('nsList', ns)
@@ -18,69 +19,102 @@ module.exports = async io => {
 
     nsSocket.on('room:newMessage', onNewMessage)
 
+    nsSocket.on('room:keypress', onKeyPress(nsSocket))
+
     nsSocket.on('disconnecting', onDisconnecting(nsSocket))
+
+    nsSocket.on('room:leave', onLeave(nsSocket))
+
+    nsSocket.on('room:updateUsersList', onUpdateUsersInRoom)
   })
+
+  /** @param {Socket} socket */
+  function onKeyPress(socket) {
+    return (isTyping, { userName, roomID }) => {
+      socket.broadcast.to(roomID).emit('room:input', isTyping ? userName : null)
+    }
+  }
 
   function onDisconnecting(socket) {
     return () => {
-      const userID = socket.handshake.auth.id
-      for (const roomTitle of socket.rooms) {
-        if (roomTitle !== socket.id) {
-          /** @type {Room} */
-          const currentRoom = ns.findRoom(roomTitle)
-          currentRoom.deleteUser(userID)
+      const user = getUserDataFromToken(socket)
 
-          setTimeout(() => {
-            if (currentRoom.isUserInRoom(userID)) return
-            socket.leave(roomTitle)
-            updateUsersInRoom(roomTitle, currentRoom.onlineUsers)
-          }, 3000)
-        }
+      // console.log(id)
+      for (const roomTitle of socket.rooms) {
+        if (roomTitle == socket.id) continue
+        /** @type {Room} */
+        const currentRoom = ns.findRoom(roomTitle)
+        currentRoom.deleteUser(user.id)
+
+        let timerID = setTimeout(() => {
+          if (currentRoom.isUserInRoom(user.id)) clearTimeout(timerID)
+          socket.leave(roomTitle)
+          updateUsersInRoom(roomTitle, currentRoom.onlineUsers)
+        }, 3000)
       }
     }
   }
 
-  function onJoinRoom(nsSocket) {
-    return async (userData, roomToLeave) => {
-      leaveOldRoom(nsSocket, userData, roomToLeave)
-      joinToNewRoom(nsSocket, userData)
+  function onLeave(socket) {
+    return roomID => {
+      const user = getUserDataFromToken(socket)
+
+      const currentRoom = ns.findRoom(roomID)
+      currentRoom.deleteUser(user.id)
+      socket.leave(roomID)
+      updateUsersInRoom(roomID, currentRoom.onlineUsers)
     }
+  }
+
+  /** @param {Socket} nsSocket */
+  function onJoinRoom(nsSocket) {
+    const user = getUserDataFromToken(nsSocket)
+
+    return async (joinRoomID, leaveRoomID) => {
+      //leave room
+      if (leaveRoomID !== null && leaveRoomID !== joinRoomID) {
+        nsSocket.leave(leaveRoomID) // leave socket from all rooms
+        const roomToLeave = ns.findRoom(leaveRoomID) // find room to leave
+        roomToLeave.selected(false) // deactivate room
+        roomToLeave.deleteUser(user.id) // delete user from room
+        updateUsersInRoom(leaveRoomID, roomToLeave.onlineUsers)
+      }
+
+      //join to room
+      nsSocket.join(joinRoomID) // add socket to room
+      const currentRoom = ns.findRoom(joinRoomID) // find room by ID
+      currentRoom.addUser(user.id) // add user to room
+      currentRoom.selected() // set room active
+
+      await currentRoom.getOnlineUsers()
+      updateUsersInRoom(joinRoomID, currentRoom.onlineUsers)
+
+      const msgHistory = await currentRoom.loadHistory()
+      nsSocket.emit('room:messages-history', msgHistory)
+    }
+  }
+
+  async function onUpdateUsersInRoom(roomID) {
+    const currentRoom = ns.findRoom(roomID) // find room by ID
+    await currentRoom.getOnlineUsers()
+    updateUsersInRoom(roomID, currentRoom.onlineUsers)
   }
 
   async function onNewMessage(msgData) {
     /** @type {Room} */
     const currentRoom = ns.findRoom(msgData.roomID)
     const message = await currentRoom.addMessage(msgData)
-    io.of(ns.endpoint).emit('room:sendMessage', message)
+    io.of(ns.endpoint).emit('room:sendMessage', { message, roomID: currentRoom.id })
   }
 
-  function updateUsersInRoom(roomTitle, users) {
+  function updateUsersInRoom(roomID, users) {
     // Send back the array of users in this room to ALL sockets connected to this room
-    io.of(ns.endpoint).to(roomTitle).emit('updateUsersInRoom', users)
+    io.of(ns.endpoint).to(roomID).emit('updateUsersInRoom', users)
   }
 
-  async function joinToNewRoom(nsSocket, userData) {
-    const { activeRoom, id } = userData
-    /** @type {Room} */
-    const currentRoom = ns.findRoom(activeRoom)
-    nsSocket.join(activeRoom)
-    currentRoom.addUser(id)
-    await currentRoom.getOnlineUsers()
-
-    updateUsersInRoom(activeRoom, currentRoom.onlineUsers)
-
-    const msgHistory = await currentRoom.loadHistory()
-    nsSocket.emit('room:messages-history', msgHistory)
-  }
-
-  function leaveOldRoom(nsSocket, userData, roomToLeave) {
-    const { activeRoom, id } = userData
-    if (roomToLeave == null || activeRoom == roomToLeave) return
-    nsSocket.leave(roomToLeave)
-    /** @type {Room} */
-    const oldRoom = ns.findRoom(roomToLeave)
-    oldRoom.deleteUser(id)
-    updateUsersInRoom(roomToLeave, oldRoom.onlineUsers)
+  function getUserDataFromToken(soket) {
+    const token = soket.handshake.auth?.token
+    return jwt.decode(token)
   }
   // io.of(ns.title).on('connection', async(newRoom, oldRoom) => {
   //
@@ -91,6 +125,7 @@ module.exports = async io => {
   //     socket.leave(roomService.title)
   //     io.emit('clients-disconnect', await roomService.getOnlineUsers())
   //   })
+
   //   socket.on('disconnect', async () => {
   //     socket.leave(roomService.title)
   //     socket.broadcast.emit('clients-disconnect', await roomService.getOnlineUsers())

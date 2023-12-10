@@ -1,10 +1,8 @@
 require('dotenv').config()
 const fs = require('fs')
-const key = fs.readFileSync('/Users/hardart/key.pem')
-const cert = fs.readFileSync('/Users/hardart/cert.pem')
 const express = require('express')
 const app = express()
-const server = require('https').createServer({ key, cert }, app)
+const server = require('http').createServer(app)
 const PORT = process.env.PORT || 3000
 const cookieParser = require('cookie-parser')
 const cors = require('cors')
@@ -19,8 +17,8 @@ const { Socket } = require('socket.io')
 const io = require('socket.io')(server, {
   cors: {
     credentials: true,
-    origin: process.env.CLIENT_SERVER
-  }
+    origin: process.env.CLIENT_SERVER,
+  },
 })
 
 app.use(express.json())
@@ -30,7 +28,7 @@ app.use(cookieParser())
 app.use(
   cors({
     credentials: true,
-    origin: process.env.CLIENT_SERVER
+    origin: process.env.CLIENT_SERVER,
   })
 )
 app.use('/', router)
@@ -43,7 +41,7 @@ async function startServer() {
       process.env.DB_CONN,
       {
         useNewUrlParser: true,
-        useUnifiedTopology: true
+        useUnifiedTopology: true,
       },
       () => console.log('БД подключена\n====================================')
     )

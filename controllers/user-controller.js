@@ -37,7 +37,7 @@ class UserController {
     try {
       const { refreshToken } = req.cookies
       await userService.logout(refreshToken)
-      return res.status(200).json({ res: 'ok' })
+      return res.status(200).json({ data: true })
     } catch (error) {
       next(error)
     }
@@ -84,9 +84,8 @@ class UserController {
 
   async changeName(req, res, next) {
     try {
-      const newName = req.body.name
-      const { accessToken } = await userService.changeName(req.user, newName)
-
+      const { name } = req.body
+      const { accessToken } = await userService.changeName(req.user, name)
       return res.status(200).json({ accessToken })
     } catch (error) {
       next(error)

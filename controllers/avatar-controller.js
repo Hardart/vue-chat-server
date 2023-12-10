@@ -3,7 +3,6 @@ const avatarService = require('../service/avatar-service')
 class AvatarController {
   async upload(req, res) {
     if (!req.file) return res.send({ error: 'upload image error' })
-
     const file = await avatarService.upload(req.user, req.file)
     return res.json(file)
   }
@@ -15,6 +14,7 @@ class AvatarController {
       return res.status(200).json({ accessToken })
     }
     res.send({ status: 'error' })
+    // res.send({ ava: req?.avatar })
   }
 
   async uploadTest(req, res) {

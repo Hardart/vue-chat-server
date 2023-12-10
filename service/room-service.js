@@ -1,3 +1,4 @@
+const { default: mongoose } = require('mongoose')
 const MessageModel = require('../models/message-model')
 const UserModel = require('../models/user-model')
 
@@ -10,11 +11,13 @@ class Room {
     this.users = new Set()
     this.history = []
     this.onlineUsers = []
+    this.active = false
   }
 
   async addMessage(msgData) {
-    const messageModel = await new MessageModel(msgData).save()
-    return await setupMessage(messageModel)
+    const { _id } = await new MessageModel(msgData).save()
+    const [message] = await MessageModel.aggregate(this.aggregateOptions('_id', _id))
+    return cleanMessage(message)
   }
 
   addUser(userID) {
@@ -27,8 +30,8 @@ class Room {
   }
 
   async loadHistory() {
-    let msgs = await MessageModel.find({ roomID: this.id })
-    return await Promise.all(msgs.map(async msg => await setupMessage(msg)))
+    const msgs = await MessageModel.aggregate(this.aggregateOptions('roomID', this.id))
+    return msgs.map(cleanMessage)
   }
 
   async getOnlineUsers() {
@@ -48,11 +51,33 @@ class Room {
   updateUser() {
     return this.users
   }
+
+  aggregateOptions(key, id) {
+    return [
+      {
+        $match: {
+          [key]: new mongoose.Types.ObjectId(id)
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'userID',
+          foreignField: '_id',
+          as: 'sender'
+        }
+      }
+    ]
+  }
+
+  selected(select = true) {
+    this.active = select ? true : false
+  }
 }
 
 module.exports = Room
 
-async function setupMessage({ userID, roomID, sendTime, text }) {
-  const { name, avatar } = await UserModel.findById(userID)
-  return { userID, roomID, userName: name, userAvatar: avatar, sendTime, text }
+function cleanMessage({ _id, sendTime, text, sender: [userData] }) {
+  const { name, avatar } = userData
+  return { id: _id.toString(), userName: name, avatar, sendTime, text }
 }

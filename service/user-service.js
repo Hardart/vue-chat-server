@@ -66,7 +66,6 @@ class UserService {
   async changeName(user, newName) {
     const email = user.email
     const { _id, name, roles, chatID, avatar } = await UserModel.findOneAndUpdate({ email }, { name: newName }, { new: true })
-    await MessageModel.updateMany({ userID: chatID }, { userName: name })
     const tokens = tokenService.generateTokens({ id: _id, email, name, roles, chatID, avatar })
     await tokenService.saveRefreshToken(_id, tokens.refreshToken)
     return { ...tokens }

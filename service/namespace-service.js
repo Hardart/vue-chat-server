@@ -22,6 +22,6 @@ class Namespace {
     return this.rooms.find(r => r.id == roomID)
   }
 }
-const mainNS = new Namespace(0, 'Main', 'main.png', '/main')
+const mainNS = new Namespace(0, 'Main', 'main.png', 'main')
 
 module.exports = mainNS

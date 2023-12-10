@@ -6,10 +6,11 @@ const resize = require('../middlware/avatar/resize-middleware')
 const deleteFullSizeImage = require('../middlware/avatar/delete-middleware')
 const cancel = require('../middlware/avatar/cancel-middleware')
 const authCheck = require('../middlware/auth-middleware')
+const isHeic = require('../middlware/avatar/convert-middleware')
 
 const avatarController = require('../controllers/avatar-controller')
 
-router.post('/avatar', authCheck, upload.single('avatar'), avatarController.upload)
+router.post('/avatar', authCheck, upload.single('avatar'), isHeic, avatarController.upload)
 router.post('/resize', authCheck, resize, deleteFullSizeImage, avatarController.resize)
 router.post('/cancel', cancel, avatarController.delete)
 router.post('/test', simpleUpload.single('image'), avatarController.uploadTest)

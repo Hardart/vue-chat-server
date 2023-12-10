@@ -1,46 +1,31 @@
 require('dotenv').config()
 const sharp = require('sharp')
 const UserModel = require('../../models/user-model')
-const MessageModel = require('../../models/message-model')
-
+const AVATAR_RESIZE = 200
 async function resize(req, res, next) {
-  if (req.body.avatar) {
-    const fullImage = req.body.avatar
+  const { avatar } = req.body
 
-    // const path = image.path.match(/(.*)\./)[1] // путь файла без расширения
-    // console.log(`PATH: ${image.path}`)
-    // const ext = image.path.match(/\.(.*)/)[0] // расширение -> .jpg
-    // const newName = `${path}_avatar${ext}`
-    const publicPath = fullImage.path.split('.').join('_avatar.')
-    const exctractTop = Math.round((fullImage.newH - fullImage.borderWidth) / 2 - fullImage.posY)
-    const exctractLeft = Math.round((fullImage.newW - fullImage.borderWidth) / 2 - fullImage.posX)
-
-    const buff = await sharp(`./${fullImage.path}`)
-      .resize({
-        width: Math.ceil(fullImage.newW),
-        height: Math.ceil(fullImage.newH)
-      })
+  if (avatar) {
+    const { left, top, width, height, bounds } = avatar.image
+    const destinationPath = avatar.path.split('.').join('_avatar.')
+    const buff = await sharp(`./public/${avatar.path}`)
+      .resize({ width, height })
       .extract({
-        left: exctractLeft,
-        top: exctractTop,
-        width: Math.round(fullImage.borderWidth),
-        height: Math.round(fullImage.borderWidth)
+        top,
+        left,
+        width: bounds.width,
+        height: bounds.height,
       })
       .toBuffer()
 
     await sharp(buff)
       .resize({
-        width: 200,
-        height: 200
+        width: AVATAR_RESIZE,
+        height: AVATAR_RESIZE,
       })
-      .toFile(publicPath)
+      .toFile(`public/${destinationPath}`)
 
-    const relativePath = publicPath.match(/[^public].+/g)[0]
-
-    const user = await UserModel.findOne({ _id: req.user.id })
-    user.avatar = relativePath
-    await user.save()
-    await MessageModel.updateMany({ userID: user.chatID }, { userAvatar: relativePath })
+    const user = await UserModel.findOneAndUpdate({ _id: req.user.id }, { avatar: destinationPath }, { new: true })
     req.user = user
     req.resizing = true
   }
